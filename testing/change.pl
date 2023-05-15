@@ -304,3 +304,9 @@ sub startup {
 
     return;
 }
+
+sub update_apps_blocked_from_operation_domain {
+    my ($apps_blocked_json) = @_;
+    my $json = JSON::MaybeXS->new;
+    %APPS_BLOCKED_FROM_OPERATION_DOMAINS = %{$json->decode($apps_blocked_json)};
+}
