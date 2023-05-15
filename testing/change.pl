@@ -1,3 +1,48 @@
+sub backend_setup {
+    my ($log) = @_;
+    my $backend_setup_finished = 0;
+
+    $redis->get(
+        'web_socket_proxy::backends',
+        sub {
+            my ($redis, $err, $backends_str) = @_;
+            if ($err) {
+                $log->error("Error reading backends from master redis: $err");
+            }
+            if ($backends_str) {
+                $log->info("Found rpc backends in redis, applying.");
+                try {
+                    my $backends = decode_json_utf8($backends_str);
+                    for my $method (keys %$backends) {
+                        my $backend = $backends->{$method} // 'default';
+                        $backend = 'default' if $backend eq 'rpc_redis';
+                        if (exists $WS_ACTIONS->{$method} and ($backend eq 'default' or exists $WS_BACKENDS->{$backend})) {
+                            $WS_ACTIONS->{$method}->{backend} = $backend;
+                        } else {
+                            $log->warn("Invalid  backend setting ignored: <$method $backend>");
+                        }
+                    }
+                    $backend_setup_finished = 1;
+                } catch ($e) {
+                    $log->error("Error applying backends from master: $e");
+                }
+            } else {    # there is nothing saved in redis yet.
+                $backend_setup_finished = 1;
+            }
+        });
+    for (my $seconds = 0.5; $seconds <= 4; $seconds *= 2) {
+        my $timeout = 0;
+        Mojo::IOLoop->timer($seconds => sub { ++$timeout });
+        Mojo::IOLoop->one_tick while !($timeout or $backend_setup_finished);
+        last if $backend_setup_finished;
+        $log->error("Timeout $seconds sec. reached when trying to load backends from master redis.");
+    }
+    unless ($backend_setup_finished) {
+        die 'Failed to read rpc backends from master redis. Please retry after ensuring that master redis is started.';
+    }
+
+}
+
 sub startup {
     my $app = shift;
 
