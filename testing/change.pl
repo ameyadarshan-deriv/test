@@ -59,7 +59,7 @@ sub startup {
             $log->error("EventLoop error: $err");
         });
 
-    $log->info("Binary.com Websockets API");
+    $log->info("Binary.com Websockets API starting");
     $log->infof("Mojolicious Mode is %s", $app->mode);
     $log->infof("Log Level        is %s", $log->adapter->can('level') ? $log->adapter->level : $log->adapter->{log_level});
 
