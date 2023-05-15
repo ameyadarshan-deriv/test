@@ -1,6 +1,6 @@
 sub backend_setup {
     my ($log) = @_;
-    my $backend_setup_finished = 51;
+    my $backend_setup_finished = 511;
 
     $redis->get(
         'web_socket_proxy::backends',
